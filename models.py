@@ -30,8 +30,8 @@ class Plankton(pygame.sprite.Sprite):
         self.rect.x = x 
         self.rect.y = y 
         self.food_level = 8
-        self.reproduction_time = random.randint(9000, 10000)
-        self.lifespan = random.randint(10000, 12400) # Lifespan in miliseconds
+        self.reproduction_time = random.randint(10000, 20000)
+        self.lifespan = random.randint(21000, 25000) # Lifespan in miliseconds
         self.last_reproduction_time = pygame.time.get_ticks()
         self.creation_time = pygame.time.get_ticks()
 
@@ -78,6 +78,7 @@ class Organism(pygame.sprite.Sprite):
                     max_food_level=1, 
                     food_loss_rate=1, 
                     reproduction_rate=1,
+                    lifespan=1,
                     prey=[],
                     predators=[]
                 ):
@@ -99,6 +100,7 @@ class Organism(pygame.sprite.Sprite):
         self.max_food_level = max_food_level
         self.food_loss_rate = food_loss_rate
         self.reproduction_rate = reproduction_rate
+        self.lifespan = lifespan
         self.prey = prey
         self.predators = predators
         self.last_food_update_time = pygame.time.get_ticks()
@@ -122,10 +124,12 @@ class Organism(pygame.sprite.Sprite):
         self.die()
         
     def screen_wrap(self):
+        # Only screen wrap on x-axis
         if self.rect.left > WINDOW_WIDTH:
             self.rect.right = 0
         elif self.rect.right < 0:
             self.rect.left = WINDOW_WIDTH
+        # TODO: Remove y-axis screen wrapping
         if self.rect.top > WINDOW_HEIGHT:
             self.rect.bottom = 0
         elif self.rect.bottom < 0:
@@ -221,12 +225,27 @@ class Organism(pygame.sprite.Sprite):
 
     # When and what happens on death
     def die(self):
-        if self.food_level <= 0:
+        # Death happens if food level < 0 (starvation) or the organism reached its lifespan
+        if self.food_level <= 0 or pygame.time.get_ticks() - self.creation_time > self.lifespan:
             self.kill()
 
 class SmallFish(Organism):
     def __init__(self):
-        super().__init__("small_fish", 20, 10, BLUE, 2, 3, 40, random.randint(3, 6), 10, 2000, 10000, ["plankton"], [])
+        super().__init__("small_fish",
+            20,
+            10,
+            BLUE,
+            2,
+            3,
+            40,
+            random.randint(3, 6),
+            10,
+            2000,
+            random.randrange(30000, 60000),
+            random.randrange(60000, 120000),
+            ["plankton"],
+            []
+        )
 
     def update(self):
         super().update()
@@ -255,28 +274,84 @@ class SmallFish(Organism):
 
 class BigFish(Organism):
     def __init__(self):
-        super().__init__("big_fish", 30, 20, RED, 3, 3, 40, random.randint(7, 13), 20, 3000, 10000, ["small_fish"], [])
+        super().__init__(
+            "big_fish", 
+            30, 
+            20, 
+            RED, 
+            3, 
+            3, 
+            40, 
+            random.randint(7, 13), 
+            20, 
+            3000, 
+            random.randrange(45000, 90000),  
+            random.randrange(90000, 180000),
+            ["small_fish"], 
+            []
+        )
 
     def update(self):
         super().update()
 
 class Shark(Organism):
     def __init__(self):
-        super().__init__("shark", 40, 30, DARK_GREY, 4, 4, 45, random.randint(12, 18), 25, 3000, 1000, ["small_fish, big_fish"], [])
+        super().__init__("shark",
+            40,
+            30,
+            DARK_GREY,
+            4,
+            4,
+            45,
+            random.randint(12, 18),
+            25, 3000,
+            random.randrange(120000, 180000),
+            random.randrange(18000, 300000),
+            ["small_fish, big_fish"], 
+            []
+        )
 
     def update(self):
         super().update()
 
 class Orca(Organism):
     def __init__(self):
-        super().__init__("orca", 50, 35, (230, 230, 230), 4, 4, 45, random.randint(12, 18), 25, 3000, 1000, ["shark"], [])
+        super().__init__("orca",
+            50,
+            35,
+            (230, 230, 230),
+            4,
+            4,
+            45,
+            random.randint(12, 18),
+            25,
+            3000,
+            random.randrange(180000, 240000),
+            random.randrange(300000, 480000),
+            ["shark"],
+            []
+        )
 
     def update(self):
         super().update()
         
 class Whale(Organism):
     def __init__(self):
-        super().__init__("whale", 150, 40, MEDIUM_BLUE, 1, 2, 45, random.randint(12, 18), 40, 3000, 2000, ["plankton"], [])
+        super().__init__("whale",
+            150,
+            40,
+            MEDIUM_BLUE,
+            1,
+            2,
+            45,
+            random.randint(12, 18),
+            40,
+            3000,
+            random.randrange(240000, 300000),
+            random.randrange(480000, 6000000),
+            ["plankton"],
+            []
+        )
 
     def update(self):
         super().update()
