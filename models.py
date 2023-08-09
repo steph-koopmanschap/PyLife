@@ -5,23 +5,30 @@ from constants import *
 
 # Sprite groups
 all_sprites = pygame.sprite.Group()
-algae_sprites = pygame.sprite.Group()
-small_fish_sprites = pygame.sprite.Group()
-big_fish_sprites = pygame.sprite.Group()
-shark_sprites = pygame.sprite.Group()
-orca_sprites = pygame.sprite.Group()
 
-class Algae(pygame.sprite.Sprite):
-    def __init__(self):
+class Rock(pygame.sprite.Sprite):
+    def __init__(self, x, y):
         super().__init__()
-        self.name = "algae"
-        self.width = random.randrange(10 - 3, 10 + 3)
-        self.height = random.randrange(10 - 3, 10 + 3)
+        self.name = "rock"
+        self.width = 40
+        self.height = 40
+        self.image = pygame.Surface((self.width, self.height))
+        self.image.fill(GREY)
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+
+class Plankton(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        super().__init__()
+        self.name = "plankton"
+        self.width = random.randrange(5 - 2, 5 + 8)
+        self.height = random.randrange(5 - 2, 5 + 8)
         self.image = pygame.Surface((self.width, self.height))
         self.image.fill(GREEN)
         self.rect = self.image.get_rect()
-        self.rect.x = random.randrange(WINDOW_WIDTH - 10)
-        self.rect.y = random.randrange(0, math.floor(WINDOW_HEIGHT * 0.4)) # Only spawn at the top 40% of the screen 
+        self.rect.x = x 
+        self.rect.y = y 
         self.food_level = 8
         self.reproduction_time = random.randint(9000, 10000)
         self.lifespan = random.randint(10000, 12400) # Lifespan in miliseconds
@@ -37,21 +44,23 @@ class Algae(pygame.sprite.Sprite):
         if current_time - self.creation_time > self.lifespan:
             self.die()
         else:
-            # Make the Algae more transparant as its lifespan decreases
+            # Make the Plankton more transparant as its lifespan decreases
             # Calculate the remaining lifespan as a fraction (value between 0 and 1)
             remaining_lifespan_fraction = (self.lifespan - (current_time - self.creation_time)) / self.lifespan
             # Calculate the alpha value based on the remaining lifespan fraction
             alpha = int(remaining_lifespan_fraction * 255)
-            # Set the alpha value to change the transparency of the Algae
+            # Set the alpha value to change the transparency of the Plankton
             self.image.set_alpha(alpha)
 
     def reproduce(self):
+        offset = 50
         for i in range(random.randint(1, 3)):
-            new_algae = Algae()
-            new_algae.rect.centerx = self.rect.centerx + random.randint(-50, 50)
-            new_algae.rect.centery = self.rect.centery + random.randint(-50, 50)
-            algae_sprites.add(new_algae)
-            all_sprites.add(new_algae)
+            new_x = self.rect.centerx + random.randint(-(offset + self.width), offset + self.width)
+            new_y = self.rect.centery + random.randint(-(offset + self.height), offset + self.height)
+            new_plankton = Plankton(new_x, new_y)
+            # new_plankton.rect.centerx = self.rect.centerx + random.randint(-(offset + self.width), offset + self.width)
+            # new_plankton.rect.centery = self.rect.centery + random.randint(-(offset + self.height), offset + self.height)
+            all_sprites.add(new_plankton)
 
     def die(self):
         self.kill()
@@ -103,6 +112,7 @@ class Organism(pygame.sprite.Sprite):
     def update(self):
         #current_time = pygame.time.get_ticks()
         self.screen_wrap()
+        self.rock_collision()
         self.find_prey()
         # Check if organism should reproduce
         self.reproduce()
@@ -128,6 +138,17 @@ class Organism(pygame.sprite.Sprite):
         distance = (dx ** 2 + dy ** 2) ** 0.5
         return distance <= self.vision_range
     
+    # Check for collisions with rocks
+    def rock_collision(self):
+        nearby_rock = [
+            rock
+            for rock in all_sprites
+            if rock.name == "rock" and self.is_within_vision(rock)
+        ]
+        if nearby_rock:
+            #self.speed = 0   
+            self.choose_new_direction()
+    
     # This is very jittery
     def move_randomly(self):
         angle = random.uniform(0, 2 * math.pi)
@@ -142,6 +163,7 @@ class Organism(pygame.sprite.Sprite):
         self.rect.x += dx
         self.rect.y += dy
 
+    # Choose a new random direction to move in
     def choose_new_direction(self):
         self.move_direction = random.uniform(0, 2 * math.pi)
         self.move_timer = pygame.time.get_ticks() + random.randint(1000, 3000)
@@ -204,7 +226,7 @@ class Organism(pygame.sprite.Sprite):
 
 class SmallFish(Organism):
     def __init__(self):
-        super().__init__("small_fish", 20, 10, BLUE, 2, 3, 40, random.randint(3, 6), 10, 2000, 10000, ["algae"], [])
+        super().__init__("small_fish", 20, 10, BLUE, 2, 3, 40, random.randint(3, 6), 10, 2000, 10000, ["plankton"], [])
 
     def update(self):
         super().update()
@@ -240,7 +262,7 @@ class BigFish(Organism):
 
 class Shark(Organism):
     def __init__(self):
-        super().__init__("shark", 40, 30, (100, 100, 100), 4, 4, 45, random.randint(12, 18), 25, 3000, 1000, ["small_fish, big_fish"], [])
+        super().__init__("shark", 40, 30, DARK_GREY, 4, 4, 45, random.randint(12, 18), 25, 3000, 1000, ["small_fish, big_fish"], [])
 
     def update(self):
         super().update()
@@ -251,14 +273,22 @@ class Orca(Organism):
 
     def update(self):
         super().update()
+        
+class Whale(Organism):
+    def __init__(self):
+        super().__init__("whale", 150, 40, MEDIUM_BLUE, 1, 2, 45, random.randint(12, 18), 40, 3000, 2000, ["plankton"], [])
+
+    def update(self):
+        super().update()
 
 # Name to class mapping
 # Input: name of organism
 # Output: corresponding class
 name_to_class = {
-    "algae": Algae(),
+    "plankton": Plankton(0,0),
     "small_fish": SmallFish(),
     "big_fish": BigFish(),
     "shark": Shark(),
-    "orca": Orca()
+    "orca": Orca(),
+    "whale": Whale()
 }

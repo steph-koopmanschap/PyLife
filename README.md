@@ -4,7 +4,7 @@ An ocean life ecosystem food web simulator
 
 ## Current organisms:
 
-### Algea
+### Plankton
  - **Predators:**
  - - Small fish
 
@@ -17,7 +17,7 @@ An ocean life ecosystem food web simulator
  - - shark
 
  - **Prey:**
- - - algae
+ - - plankton
 
 ### Big fish
  - **Predators:**
@@ -40,3 +40,11 @@ An ocean life ecosystem food web simulator
 
  - **Prey:**
  - - shark
+
+ ### Whale
+ - **Predators:**
+ - - none
+
+ - **Prey:**
+ - - plankton
+
