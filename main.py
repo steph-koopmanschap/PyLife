@@ -29,9 +29,7 @@ algae_sprites = pygame.sprite.Group()
 small_fish_sprites = pygame.sprite.Group()
 big_fish_sprites = pygame.sprite.Group()
 shark_sprites = pygame.sprite.Group()
-
-
-        
+orca_sprites = pygame.sprite.Group()
 
 class Algae(pygame.sprite.Sprite):
     def __init__(self):
@@ -307,6 +305,57 @@ class Shark(Organism):
     def choose_new_direction(self):
         self.move_direction = random.uniform(0, 2 * math.pi)
         self.move_timer = pygame.time.get_ticks() + random.randint(1000, 3000)
+        
+class Orca(Organism):
+    def __init__(self):
+        super().__init__("orca", 50, 35, (230, 230, 230), 4, 4, 45, random.randint(12, 18), 25, 3000, 1000)
+        self.move_direction = random.uniform(0, 2 * math.pi)
+        self.move_timer = pygame.time.get_ticks() + random.randint(1000, 3000)
+
+    # Checks if the target is within the vision range
+    def is_within_vision(self, target_sprite):
+        dx = target_sprite.rect.centerx - self.rect.centerx
+        dy = target_sprite.rect.centery - self.rect.centery
+        distance = (dx ** 2 + dy ** 2) ** 0.5
+        return distance <= self.vision_range
+
+    def update(self):
+        current_time = pygame.time.get_ticks()
+
+        if current_time - self.last_food_update_time > self.food_loss_rate:
+            self.food_level -= 1
+            self.last_food_update_time = current_time
+
+        # Check if organism should die
+        self.die()
+
+        # reproduction behaviour
+        if self.food_level >= self.max_food_level and current_time - self.last_reproduction_time > self.reproduction_rate:
+            self.reproduce()
+            self.last_reproduction_time = current_time
+
+    def reproduce(self):
+        self.food_level *= 0.5
+        new_orca = Orca()
+        new_orca.rect.centerx = self.rect.centerx + random.randint(-80, 80)
+        new_orca.rect.centery = self.rect.centery + random.randint(-80, 80)
+        shark_sprites.add(new_orca)
+        all_sprites.add(new_orca)
+
+    # When and what happens on death
+    def die(self):
+        if self.food_level <= 0:
+            self.kill()
+
+    def move_in_current_direction(self):
+        dx = math.cos(self.move_direction) * self.speed
+        dy = math.sin(self.move_direction) * self.speed
+        self.rect.x += dx
+        self.rect.y += dy
+
+    def choose_new_direction(self):
+        self.move_direction = random.uniform(0, 2 * math.pi)
+        self.move_timer = pygame.time.get_ticks() + random.randint(1000, 3000)
 
 # Clear the screen
 def clear_screen():
@@ -419,6 +468,31 @@ def update():
                 shark.move_in_current_direction()
             else:
                 shark.choose_new_direction()
+                
+    # Orca behavior
+    for orca in orca_sprites:
+        nearby_shark = [
+            shark
+            for shark in shark_sprites
+            if orca.is_within_vision(shark)
+        ]
+        if nearby_shark:
+            target_shark = nearby_shark[0]
+            dx = target_shark.rect.centerx - shark.rect.centerx
+            dy = target_shark.rect.centery - shark.rect.centery
+            distance = max(1, (dx ** 2 + dy ** 2) ** 0.5)
+            orca.rect.x += (dx / distance) * 4
+            orca.rect.y += (dy / distance) * 4
+
+            if orca.rect.colliderect(target_shark.rect):
+                orca.food_level += 4
+                target_shark.kill()
+        # Move(coast) in random direction when no prey found
+        elif not nearby_shark:
+            if pygame.time.get_ticks() < orca.move_timer:
+                orca.move_in_current_direction()
+            else:
+                orca.choose_new_direction()
 
 # Draw game elements here
 def draw():
@@ -466,6 +540,12 @@ def init():
         shark = Shark()
         shark_sprites.add(shark)
         all_sprites.add(shark)
+        
+    # Add orcas
+    for _ in range(2):
+        orca = Orca()
+        orca_sprites.add(orca)
+        all_sprites.add(orca)
 
     print("Initializiation done.")
 
